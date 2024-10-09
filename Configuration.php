@@ -7,8 +7,7 @@ use mikemadisonweb\rabbitmq\components\Producer;
 use mikemadisonweb\rabbitmq\components\Routing;
 use mikemadisonweb\rabbitmq\exceptions\InvalidConfigException;
 use PhpAmqpLib\Connection\AbstractConnection;
-use PhpAmqpLib\Connection\AMQPLazyConnection;
-use PhpAmqpLib\Connection\AMQPSSLConnection;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
 use Yii;
 use yii\base\Component;
 use yii\di\NotInstantiableException;
@@ -33,7 +32,8 @@ class Configuration extends Component
         'connections' => [
             [
                 'name' => self::DEFAULT_CONNECTION_NAME,
-                'type' => AMQPLazyConnection::class,
+                'type' => AMQPStreamConnection::class,
+                'is_lazy' => true,
                 'url' => null,
                 'host' => null,
                 'port' => 5672,
@@ -42,7 +42,18 @@ class Configuration extends Component
                 'vhost' => '/',
                 'connection_timeout' => 3,
                 'read_write_timeout' => 3,
-                'ssl_context' => null,
+                'ssl_options' => [
+                    'cafile' => null,
+                    'capath' => null,
+                    'local_cert' => null,
+                    'local_pk' => null,
+                    'verify_peer' => null,
+                    'verify_peer_name' => null,
+                    'passphrase' => null,
+                    'ciphers' => null,
+                    'security_level' => null,
+                    'crypto_method' => null,
+                ],
                 'keepalive' => false,
                 'heartbeat' => 0,
                 'channel_rpc_timeout' => 0.0,
@@ -277,12 +288,12 @@ class Configuration extends Component
             if (isset($connection['type']) && !is_subclass_of($connection['type'], AbstractConnection::class)) {
                 throw new InvalidConfigException('Connection type should be a subclass of PhpAmqpLib\Connection\AbstractConnection.');
             }
-            if (!empty($connection['ssl_context']) && empty($connection['type'])) {
-                throw new InvalidConfigException('If you are using a ssl connection, the connection type must be AMQPSSLConnection::class');
-            }
-            if (!empty($connection['ssl_context']) && $connection['type'] !== AMQPSSLConnection::class) {
-                throw new InvalidConfigException('If you are using a ssl connection, the connection type must be AMQPSSLConnection::class');
-            }
+//            if (!empty($connection['ssl_context']) && empty($connection['type'])) {
+//                throw new InvalidConfigException('If you are using a ssl connection, the connection type must be AMQPSSLConnection::class');
+//            }
+//            if (!empty($connection['ssl_context']) && $connection['type'] !== AMQPSSLConnection::class) {
+//                throw new InvalidConfigException('If you are using a ssl connection, the connection type must be AMQPSSLConnection::class');
+//            }
         }
 
         foreach ($this->exchanges as $exchange) {

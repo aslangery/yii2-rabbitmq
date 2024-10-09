@@ -3,6 +3,10 @@
 namespace mikemadisonweb\rabbitmq\components;
 
 use PhpAmqpLib\Connection\AbstractConnection;
+use PhpAmqpLib\Connection\AMQPConnectionConfig;
+use PhpAmqpLib\Connection\AMQPConnectionFactory;
+use PhpAmqpLib\Connection\AMQPSocketConnection;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
 
 class AbstractConnectionFactory
 {
@@ -29,40 +33,45 @@ class AbstractConnectionFactory
      */
     public function createConnection() : AbstractConnection
     {
-        if ($this->_parameters['ssl_context'] !== null) {
-            return new $this->_class(
-                $this->_parameters['host'],
-                $this->_parameters['port'],
-                $this->_parameters['user'],
-                $this->_parameters['password'],
-                $this->_parameters['vhost'],
-                $this->_parameters['ssl_context'],
-                [
-                    'connection_timeout' => $this->_parameters['connection_timeout'],
-                    'read_write_timeout' => $this->_parameters['read_write_timeout'],
-                    'keepalive' => $this->_parameters['keepalive'],
-                    'heartbeat' => $this->_parameters['heartbeat'],
-                    'channel_rpc_timeout' => $this->_parameters['channel_rpc_timeout'],
-                ]
-            );
+        $amqpConfig = new AMQPConnectionConfig();
+        if ($this->_parameters['type'] === AMQPStreamConnection::class) {
+            $amqpConfig->setIoType(AMQPConnectionConfig::IO_TYPE_STREAM);
         }
-        return new $this->_class(
-            $this->_parameters['host'],
-            $this->_parameters['port'],
-            $this->_parameters['user'],
-            $this->_parameters['password'],
-            $this->_parameters['vhost'],
-            false,      // insist
-            'AMQPLAIN', // login_method
-            null,       // login_response
-            'en_EN',    // locale
-            $this->_parameters['connection_timeout'],
-            $this->_parameters['read_write_timeout'],
-            $this->_parameters['ssl_context'],
-            $this->_parameters['keepalive'],
-            $this->_parameters['heartbeat'],
-            $this->_parameters['channel_rpc_timeout']
-        );
+        if ($this->_parameters['type'] === AMQPSocketConnection::class) {
+            $amqpConfig->setIoType(AMQPConnectionConfig::IO_TYPE_SOCKET);
+        }
+        $amqpConfig->setHost($this->_parameters['host']);
+        $amqpConfig->setPort($this->_parameters['port']);
+        $amqpConfig->setUser($this->_parameters['user']);
+        $amqpConfig->setPassword($this->_parameters['password']);
+        $amqpConfig->setVhost($this->_parameters['vhost']);
+        $amqpConfig->setInsist(false);      // insist
+        $amqpConfig->setLoginMethod( 'AMQPLAIN'); // login_method
+        $amqpConfig->setLoginResponse('');    // login_response
+        $amqpConfig->setLocale('en_EN');    // locale
+        $amqpConfig->setConnectionTimeout($this->_parameters['connection_timeout']);
+        $amqpConfig->setReadTimeout($this->_parameters['read_write_timeout']);
+        $amqpConfig->setKeepalive($this->_parameters['keepalive']);
+        $amqpConfig->setHeartbeat($this->_parameters['heartbeat']);
+        $amqpConfig->setChannelRPCTimeout($this->_parameters['channel_rpc_timeout']);
+        $amqpConfig->setIsLazy($this->_parameters['is_lazy']);
+        if (
+            $this->_parameters['ssl_options'] !== null
+            && is_array($this->_parameters['ssl_options'])
+        ) {
+            $amqpConfig->setIsSecure(true);
+            $amqpConfig->setSslCaCert($this->_parameters['ssl_options']['cafile']);
+            $amqpConfig->setSslCaPath($this->_parameters['ssl_options']['capath']);
+            $amqpConfig->setSslCert($this->_parameters['ssl_options']['local_cert']);
+            $amqpConfig->setSslKey($this->_parameters['ssl_options']['local_pk']);
+            $amqpConfig->setSslVerify($this->_parameters['ssl_options']['verify_peer']);
+            $amqpConfig->setSslVerifyName($this->_parameters['ssl_options']['verify_peer_name']);
+            $amqpConfig->setSslPassPhrase($this->_parameters['ssl_options']['passphrase']);
+            $amqpConfig->setSslCiphers($this->_parameters['ssl_options']['ciphers']);
+            $amqpConfig->setSslSecurityLevel($this->_parameters['ssl_options']['security_level']);
+            $amqpConfig->setSslCryptoMethod($this->_parameters['ssl_options']['crypto_method']);
+        }
+        return AMQPConnectionFactory::create($amqpConfig);
     }
 
     /**
